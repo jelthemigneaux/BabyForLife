@@ -1,6 +1,6 @@
-/* Nieuwe echo? Vul bij de juiste rij `image` en `date` in; `meta` is optioneel. */
+/* Nieuwe echo? Zet de foto naast index.html en vul bij de juiste rij `image` en `date` in; `meta` is optioneel. */
 const ECHOS = [
-  { date: '12 oktober 2026', meta: '8 weken en 4 dagen', image: 'assets/echo-01.jpg' },
+  { date: '12 oktober 2026', meta: '8 weken en 4 dagen', image: 'echo-01.jpg' },
   { date: '± november 2026', meta: 'Rond 12 weken' },
   { date: '± eind december 2026', meta: 'Rond 20 weken' },
   { date: '± februari 2027', meta: 'Rond 26 weken' },
@@ -19,7 +19,7 @@ function openLightbox(src, caption) {
 }
 $('lightboxClose').addEventListener('click', () => lightbox.close());
 lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.close(); });
-$('echo').addEventListener('click', () => openLightbox('assets/echo-01.jpg', '12 oktober 2026'));
+$('echo').addEventListener('click', () => openLightbox('echo-01.jpg', '12 oktober 2026'));
 
 /* ---------- Echo-overzicht ---------- */
 const rail = $('rail');
@@ -140,7 +140,7 @@ function initScene() {
   gsap.set(['#word2', '#word3'], { xPercent: -50, yPercent: -50, autoAlpha: 0 });
   gsap.set(['#ribbon', '#dateLabel', '#dateNote'], { autoAlpha: 0 });
 
-  const tl = gsap.timeline({ defaults: { ease: 'none' } });
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
 
   /* 1. Krassen: de eerste drie schermen scrollen */
   tl.to(foil, { progress: 1, duration: 3, onUpdate: foil.draw }, 0);
@@ -160,7 +160,7 @@ function initScene() {
 
   /* 3. Baby vliegt links binnen */
   const tBaby = 7;
-  gsap.set(logos, { y: logosOffset(), scale: 1.14 });
+  gsap.set(logos, { y: logosOffset(), scale: 1.08 });
   tl.fromTo('#baby', { x: '-130vw', rotation: -26, scale: 0.55 }, { x: 0, rotation: 0, scale: 1, duration: 1.1, ease: 'back.out(1.5)' }, tBaby);
   tl.to('#glowBlue', { opacity: 1, duration: 1.1 }, tBaby);
 
@@ -181,24 +181,46 @@ function initScene() {
   /* 6. Prijsmoment */
   const tWin = tDate + 0.65;
   tl.to('#hint', { autoAlpha: 0, duration: 0.2 }, tWin - 0.2);
-  tl.to({}, { duration: 1.9 }, tWin); // blijft nog even staan voor de scène loslaat
+  tl.to({}, { duration: 0.2 }, tWin);
 
-  let won = false;
+  let won = false, held = false;
   tl.eventCallback('onUpdate', () => {
     const t = tl.time();
+    if (t >= tEcho && !held) { held = true; holdScroll(3600); }
+    else if (t < tEcho - 0.2) held = false;
     if (t >= tWin && !won) { won = true; win(); }
     else if (t < tWin - 0.25 && won) { won = false; unwin(); }
   });
 
+  /* Stops: drie keer krassen, U, hebt, gewonnen, Baby, Migneaux en het prijsmoment.
+     Elke stop ligt precies een scherm verder, zodat een korte veeg altijd de volgende haalt. */
+  const stops = [0, 1, 2, 3.7, 4.7, 6, tBaby + 1.15, tMig + 1.15, tWin + 0.1];
   const unit = CSS.supports('height', '1svh') ? 'svh' : 'vh';
-  $('track').style.height = (tl.duration() + 1) * 100 + unit;
+  $('track').style.height = stops.length * 100 + unit;
+  stops.forEach((_, i) => {
+    const stop = document.createElement('div');
+    stop.className = 'snap';
+    stop.style.top = i * 100 + unit;
+    $('track').appendChild(stop);
+  });
+  const timeAt = (s) => {
+    const i = Math.min(Math.floor(s), stops.length - 2);
+    return stops[i] + (stops[i + 1] - stops[i]) * (s - i);
+  };
   ScrollTrigger.create({
-    animation: tl,
     trigger: '#track',
     start: 'top top',
     end: 'bottom bottom',
-    scrub: 0.6,
+    onUpdate(self) {
+      const t = timeAt(self.progress * (stops.length - 1));
+      /* Grotere stappen krijgen meer tijd, zodat de echo en datum rustig binnenkomen. */
+      const duration = gsap.utils.clamp(0.5, 1.6, Math.abs(t - tl.time()) * 0.55);
+      gsap.to(tl, { time: t, duration, ease: 'sine.out', overwrite: true });
+    },
   });
+  /* Pas aan zodra alle stops bestaan, anders springt de browser naar de enige stop die er al is. */
+  scrollTo(0, 0);
+  document.documentElement.classList.add('snapping');
 
   /* Gebeurt op tijd, niet op scroll: dit moet altijd helemaal afspelen. */
   let winTl;
@@ -226,6 +248,20 @@ function initScene() {
   }
 
   addEventListener('resize', () => { foil.resize(); foil.draw(); });
+}
+
+/* Houdt het scrollen even tegen, zodat het prijsmoment helemaal gezien wordt. */
+function holdScroll(ms) {
+  const block = (e) => { if (e.cancelable) e.preventDefault(); };
+  const keys = (e) => { if ([' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'End', 'Home'].includes(e.key)) e.preventDefault(); };
+  addEventListener('wheel', block, { passive: false });
+  addEventListener('touchmove', block, { passive: false });
+  addEventListener('keydown', keys);
+  setTimeout(() => {
+    removeEventListener('wheel', block);
+    removeEventListener('touchmove', block);
+    removeEventListener('keydown', keys);
+  }, ms);
 }
 
 /* Zilverfolie die langs een zigzag wordt weggekrast, gestuurd door `progress`. */
