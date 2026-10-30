@@ -170,7 +170,7 @@ function initScene() {
   tl.to('#glowPink', { opacity: 1, duration: 1.1 }, tMig);
 
   /* 5. De echo komt van onder, de datum er meteen achteraan */
-  const tEcho = 10.9;
+  const tEcho = 10.4;
   tl.fromTo('#echo', { y: '105vh', rotation: -8, rotationX: 38, scale: 0.82, transformPerspective: 900 }, { y: 0, rotation: 0, rotationX: 0, scale: 1, duration: 1.2, ease: 'expo.out' }, tEcho);
   tl.to(logos, { y: 0, scale: 1, duration: 0.9, ease: 'power3.inOut' }, tEcho);
   tl.to('#glowViolet', { opacity: 0.75, duration: 1.2 }, tEcho);
@@ -183,18 +183,16 @@ function initScene() {
   tl.to('#hint', { autoAlpha: 0, duration: 0.2 }, tWin - 0.2);
   tl.to({}, { duration: 0.2 }, tWin);
 
-  let won = false, held = false;
+  let won = false;
   tl.eventCallback('onUpdate', () => {
     const t = tl.time();
-    if (t >= tEcho && !held) { held = true; holdScroll(3600); }
-    else if (t < tEcho - 0.2) held = false;
     if (t >= tWin && !won) { won = true; win(); }
     else if (t < tWin - 0.25 && won) { won = false; unwin(); }
   });
 
-  /* Stops: drie keer krassen, U, hebt, gewonnen, Baby, Migneaux en het prijsmoment.
+  /* Stops: drie keer krassen, U, hebt, gewonnen, Baby en het prijsmoment. Migneaux, echo en datum spelen vanzelf na de veeg vanaf Baby.
      Elke stop ligt precies een scherm verder, zodat een korte veeg altijd de volgende haalt. */
-  const stops = [0, 1, 2, 3.7, 4.7, 6, tBaby + 1.15, tMig + 1.15, tWin + 0.1];
+  const stops = [0, 1, 2, 3.7, 4.7, 6, tBaby + 1.15, tWin + 0.1];
   const unit = CSS.supports('height', '1svh') ? 'svh' : 'vh';
   $('track').style.height = stops.length * 100 + unit;
   stops.forEach((_, i) => {
@@ -203,6 +201,8 @@ function initScene() {
     stop.style.top = i * 100 + unit;
     $('track').appendChild(stop);
   });
+  const babyStop = stops.length - 2;
+  let held = false;
   const timeAt = (s) => {
     const i = Math.min(Math.floor(s), stops.length - 2);
     return stops[i] + (stops[i + 1] - stops[i]) * (s - i);
@@ -212,10 +212,15 @@ function initScene() {
     start: 'top top',
     end: 'bottom bottom',
     onUpdate(self) {
-      const t = timeAt(self.progress * (stops.length - 1));
-      /* Grotere stappen krijgen meer tijd, zodat de echo en datum rustig binnenkomen. */
-      const duration = gsap.utils.clamp(0.5, 1.6, Math.abs(t - tl.time()) * 0.55);
-      gsap.to(tl, { time: t, duration, ease: 'sine.out', overwrite: true });
+      const s = self.progress * (stops.length - 1);
+      /* Vanaf de veeg na Baby speelt alles vanzelf: dan mag er even niet verder gescrold worden. */
+      if (s <= babyStop + 0.01) held = false;
+      else if (!held && self.direction > 0) { held = true; holdScroll(4800); }
+      const t = timeAt(s);
+      /* Grotere stappen krijgen meer tijd, zodat Migneaux, echo en datum na elkaar te zien zijn. */
+      const distance = Math.abs(t - tl.time());
+      const duration = gsap.utils.clamp(0.5, 3, distance * 0.55);
+      gsap.to(tl, { time: t, duration, ease: distance > 2 ? 'none' : 'sine.out', overwrite: true });
     },
   });
   /* Pas aan zodra alle stops bestaan, anders springt de browser naar de enige stop die er al is. */
