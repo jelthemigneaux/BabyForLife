@@ -219,9 +219,9 @@ function initScene() {
     end: 'bottom bottom',
     onUpdate(self) {
       const s = self.progress * (stops.length - 1);
-      /* Vanaf de veeg na Baby speelt alles vanzelf: dan mag er even niet verder gescrold worden. */
+      /* Pas blokkeren als de veeg na Baby bijna is aangekomen: eerder zou de vinger de veeg zelf tegenhouden. */
       if (s <= babyStop + 0.01) held = false;
-      else if (!held && self.direction > 0) { held = true; holdScroll(4800); }
+      else if (!held && self.direction > 0 && s >= babyStop + 0.9) { held = true; holdScroll(4000); }
       const t = timeAt(s);
       /* Grotere stappen krijgen meer tijd, zodat Migneaux, echo en datum na elkaar te zien zijn. */
       const distance = Math.abs(t - tl.time());
