@@ -176,7 +176,7 @@ function initScene() {
   tl.to('#glowPink', { opacity: 1, duration: 1.1 }, tMig);
 
   /* 5. De echo komt van onder, de datum er meteen achteraan */
-  const tEcho = 10.4;
+  const tEcho = 10.25;
   tl.fromTo('#echo', { y: '105vh', rotation: -8, rotationX: 38, scale: 0.82, transformPerspective: 900 }, { y: 0, rotation: 0, rotationX: 0, scale: 1, duration: 1.2, ease: 'expo.out' }, tEcho);
   tl.to(logos, { y: 0, scale: 1, duration: 0.9, ease: 'power3.inOut' }, tEcho);
   tl.to('#glowViolet', { opacity: 0.75, duration: 1.2 }, tEcho);
@@ -208,7 +208,7 @@ function initScene() {
     $('track').appendChild(stop);
   });
   const babyStop = stops.length - 2;
-  let held = false;
+  let held = false, target = 0;
   const timeAt = (s) => {
     const i = Math.min(Math.floor(s), stops.length - 2);
     return stops[i] + (stops[i + 1] - stops[i]) * (s - i);
@@ -221,11 +221,15 @@ function initScene() {
       const s = self.progress * (stops.length - 1);
       /* Pas blokkeren als de veeg na Baby bijna is aangekomen: eerder zou de vinger de veeg zelf tegenhouden. */
       if (s <= babyStop + 0.01) held = false;
-      else if (!held && self.direction > 0 && s >= babyStop + 0.9) { held = true; holdScroll(4000); }
-      const t = timeAt(s);
+      else if (!held && self.direction > 0 && s >= babyStop + 0.9) { held = true; holdScroll(3400); }
+      /* De veeg na Baby start de hele reeks: Migneaux, echo en datum wachten niet op verder scrollen. */
+      const leavingBaby = self.direction > 0 && s > babyStop + 0.06;
+      const t = leavingBaby ? stops[stops.length - 1] : timeAt(s);
+      if (t === target) return;
+      target = t;
       /* Grotere stappen krijgen meer tijd, zodat Migneaux, echo en datum na elkaar te zien zijn. */
       const distance = Math.abs(t - tl.time());
-      const duration = gsap.utils.clamp(0.5, 3, distance * 0.55);
+      const duration = gsap.utils.clamp(0.5, 3, distance * 0.42);
       gsap.to(tl, { time: t, duration, ease: distance > 2 ? 'none' : 'sine.out', overwrite: true });
     },
   });
