@@ -119,6 +119,12 @@ const confetti = (() => {
 const canAnimate = window.gsap && window.ScrollTrigger && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (canAnimate) initScene();
 
+/* Laadscherm weg zodra de letters, echo en lettertypes klaar zijn, of na maximaal 2,5 seconden. */
+const ready = [...document.querySelectorAll('#baby img, #mig img, #echo img')].map((img) => img.decode().catch(() => {}));
+if (document.fonts) ready.push(document.fonts.ready);
+Promise.race([Promise.all(ready), new Promise((done) => setTimeout(done, 2500))])
+  .then(() => document.documentElement.classList.remove('is-loading'));
+
 function initScene() {
   document.documentElement.classList.add('anim');
   gsap.registerPlugin(ScrollTrigger);

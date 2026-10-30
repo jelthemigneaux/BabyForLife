@@ -2,6 +2,8 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
+  <!-- Verbergt de pagina tot de scène klaarstaat, zodat de prijs niet even zichtbaar is bij het openen. -->
+  <script>document.documentElement.classList.add('is-loading');setTimeout(function(){document.documentElement.classList.remove('is-loading')},8000)</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Titel en beschrijving verklappen bewust niets: dit is ook wat in linkvoorbeelden verschijnt. -->
   <title>U hebt gewonnen!</title>
@@ -26,6 +28,8 @@
   </div>
 
   <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+  <div class="loader" aria-hidden="true"><div class="loader__coin">€</div></div>
 
   <main>
     <section class="track" id="track">
