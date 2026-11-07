@@ -1,7 +1,8 @@
-/* Nieuwe echo? Zet de foto naast index.html en vul bij de juiste rij `image` en `date` in; `meta` is optioneel. */
+/* Nieuwe echo? Zet de foto naast index.html en vul bij de juiste rij `image` en `date` in; `meta` is optioneel.
+   `video` speelt af bij klikken, `scratch: true` maakt er een kraskaart van en `status` verschijnt na het krassen. */
 const ECHOS = [
   { date: '12 oktober 2026', meta: '8 weken en 4 dagen', image: 'echo-01.jpg' },
-  { date: '± november 2026', meta: 'Rond 12 weken' },
+  { date: '6 november 2026', meta: '12 weken en 1 dag', image: 'echo-02.jpg', video: 'echo-02.mp4', scratch: true },
   { date: '± eind december 2026', meta: 'Rond 20 weken' },
   { date: '± februari 2027', meta: 'Rond 26 weken' },
   { date: '± maart 2027', meta: 'Rond 30 weken' },
@@ -12,11 +13,25 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------- Lightbox ---------- */
 const lightbox = $('lightbox');
-function openLightbox(src, caption) {
-  $('lightboxImg').src = src;
+const lightboxVideo = $('lightboxVideo');
+function openLightbox(src, caption, video) {
+  $('lightboxImg').hidden = !!video;
+  lightboxVideo.hidden = !video;
+  if (video) {
+    lightboxVideo.poster = src;
+    lightboxVideo.src = video;
+  } else {
+    $('lightboxImg').src = src;
+  }
   $('lightboxCaption').textContent = caption;
   lightbox.showModal();
+  if (video) lightboxVideo.play().catch(() => {});
 }
+lightbox.addEventListener('close', () => {
+  lightboxVideo.pause();
+  lightboxVideo.removeAttribute('src');
+  lightboxVideo.load();
+});
 $('lightboxClose').addEventListener('click', () => lightbox.close());
 lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.close(); });
 $('echo').addEventListener('click', () => openLightbox('echo-01.jpg', '12 oktober 2026'));
@@ -25,17 +40,37 @@ $('echo').addEventListener('click', () => openLightbox('echo-01.jpg', '12 oktobe
 const rail = $('rail');
 ECHOS.forEach((echo, i) => {
   const card = document.createElement('article');
-  card.className = 'card' + (echo.image ? ' card--done' : '');
+  card.className = 'card' + (echo.image && !echo.scratch ? ' card--done' : '');
+  const play = '<span class="card__play" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>';
+  const check = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const label = `${echo.video ? 'Video van echo' : 'Echo'} ${i + 1} openen`;
   const media = echo.image
-    ? `<button class="card__media" type="button" aria-label="Echo ${i + 1} in het groot openen"><img src="${echo.image}" alt="Echo ${i + 1}, ${echo.date}" loading="lazy"></button>`
+    ? `<div class="card__media">
+        <button class="card__open" type="button" aria-label="${label}"${echo.scratch ? ' tabindex="-1"' : ''}><img src="${echo.image}" alt="Echo ${i + 1}, ${echo.date}" loading="lazy">${echo.video ? play : ''}</button>
+        ${echo.status ? `<span class="card__badge"><span class="card__check">${check}</span>${echo.status}</span>` : ''}
+        ${echo.scratch ? `<canvas class="card__scratch" tabindex="0" role="button" aria-label="Kras echo ${i + 1} open"></canvas>` : ''}
+      </div>`
     : `<div class="card__media"><div class="card__foil" aria-hidden="true">?</div></div>`;
+  const tag = (open) => `Echo ${i + 1}${!echo.image ? ' · nog te krassen' : open ? '' : ' · kras om te openen'}`;
   card.innerHTML = `${media}
     <div class="card__body">
-      <p class="card__tag">Echo ${i + 1}${echo.image ? '' : ' · nog te krassen'}</p>
+      <p class="card__tag">${tag(!echo.scratch)}</p>
       <p class="card__date">${echo.date}</p>
       <p class="card__meta">${echo.meta || ''}</p>
     </div>`;
-  if (echo.image) card.querySelector('button').addEventListener('click', () => openLightbox(echo.image, echo.date));
+  if (echo.image) {
+    const caption = echo.status ? `${echo.date} · ${echo.status.toLowerCase()}` : echo.date;
+    card.querySelector('.card__open').addEventListener('click', () => openLightbox(echo.image, caption, echo.video));
+  }
+  if (echo.scratch) {
+    makeScratch(card.querySelector('.card__scratch'), () => {
+      card.classList.add('card--done');
+      card.querySelector('.card__tag').textContent = tag(true);
+      card.querySelector('.card__open').removeAttribute('tabindex');
+      const r = card.querySelector('.card__media').getBoundingClientRect();
+      confetti.at(r.left + r.width / 2, r.top + r.height / 2);
+    });
+  }
   rail.appendChild(card);
 });
 function updateCount() {
@@ -111,6 +146,9 @@ const confetti = (() => {
     rain() {
       const W = innerWidth;
       for (let i = 0; i < 7; i++) burst(Math.random() * W, -20, 12, 1.57, 0.8, 4);
+    },
+    at(x, y) {
+      burst(x, y, 70, -1.57, 6.28, 9);
     },
   };
 })();
@@ -365,4 +403,83 @@ function makeFoil(canvas) {
   resize();
   if (document.fonts) document.fonts.ready.then(() => { resize(); });
   return state;
+}
+
+/* Kraskaart voor een echo: met vinger of muis wegkrassen; vanaf de helft gaat de rest vanzelf weg. */
+function makeScratch(canvas, onDone) {
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1, last = null, moves = 0, started = false, done = false;
+
+  function paint() {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || started) return;
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    [['#8d8ea6', 0], ['#d9dae6', 0.22], ['#9fa0b6', 0.4], ['#f0f0f6', 0.55], ['#9a9bb2', 0.72], ['#cfd0de', 1]].forEach(([c, o]) => g.addColorStop(o, c));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < W * H / 26; i++) {
+      ctx.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,.14)' : 'rgba(40,35,90,.08)';
+      ctx.fillRect(Math.random() * W, Math.random() * H, 1.3, 1.3);
+    }
+    ctx.fillStyle = 'rgba(35,30,75,.72)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `800 ${Math.round(H * 0.36)}px "Bricolage Grotesque", Manrope, system-ui, sans-serif`;
+    ctx.fillText('?', W / 2, H * 0.44);
+    ctx.fillStyle = 'rgba(35,30,75,.5)';
+    ctx.font = `800 ${Math.round(H * 0.075)}px Manrope, system-ui, sans-serif`;
+    ctx.fillText('★  KRAS HIER  ★', W / 2, H * 0.8);
+  }
+
+  function point(e) {
+    const r = canvas.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  }
+  function scratch(to) {
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(28, W * 0.14);
+    ctx.beginPath();
+    ctx.moveTo(...(last || to));
+    ctx.lineTo(...to);
+    ctx.stroke();
+    last = to;
+    if (++moves % 6 === 0 && cleared() > 0.5) finish();
+  }
+  function cleared() {
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let clear = 0, total = 0;
+    for (let i = 3; i < data.length; i += 4 * 8) { total++; if (data[i] < 20) clear++; }
+    return clear / total;
+  }
+  function finish() {
+    if (done) return;
+    done = true;
+    canvas.classList.add('is-gone');
+    setTimeout(() => canvas.remove(), 600);
+    onDone();
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (done) return;
+    started = true;
+    canvas.setPointerCapture(e.pointerId);
+    last = null;
+    scratch(point(e));
+  });
+  canvas.addEventListener('pointermove', (e) => { if (last && !done) scratch(point(e)); });
+  canvas.addEventListener('pointerup', () => { last = null; });
+  canvas.addEventListener('pointercancel', () => { last = null; });
+  canvas.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); } });
+
+  requestAnimationFrame(paint);
+  addEventListener('resize', paint);
+  if (document.fonts) document.fonts.ready.then(paint);
 }

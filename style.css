@@ -27,6 +27,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 img { display: block; max-width: 100%; height: auto; }
+[hidden] { display: none !important; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 
 /* ---------- Laadscherm ---------- */
@@ -228,6 +229,37 @@ main { transition: opacity .4s ease-out; }
 .card--done { box-shadow: inset 0 0 0 1px var(--line); }
 .card__media { display: block; width: 100%; aspect-ratio: 7 / 5; position: relative; overflow: hidden; background: #000; }
 .card__media img { width: 100%; height: 100%; object-fit: cover; }
+.card__open { display: block; width: 100%; height: 100%; position: relative; -webkit-tap-highlight-color: transparent; }
+.card__open:focus-visible, .card__scratch:focus-visible { outline: 2px solid var(--ice); outline-offset: -3px; }
+.card__scratch {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  touch-action: none; cursor: crosshair;
+  transition: opacity .5s ease-out;
+}
+.card__scratch.is-gone { opacity: 0; pointer-events: none; }
+.card__play {
+  position: absolute; left: 10px; bottom: 10px;
+  width: 38px; height: 38px;
+  display: grid; place-items: center; padding-left: 2px;
+  border-radius: 50%; color: #fff;
+  background: rgba(14, 10, 38, .55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .75);
+  transition: opacity .4s .35s, transform .5s .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+.card__badge {
+  position: absolute; left: 10px; top: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px 5px 5px;
+  border-radius: 999px; background: #fff; color: var(--ink);
+  font-size: 13px; font-weight: 800;
+  box-shadow: 0 6px 18px rgba(5, 3, 20, .35);
+  pointer-events: none;
+  transition: opacity .35s .45s, transform .55s .45s cubic-bezier(.2, 1.5, .4, 1);
+}
+.card__check { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #2fbf71; color: #fff; }
+.card:not(.card--done) .card__play { opacity: 0; transform: scale(.6); }
+.card:not(.card--done) .card__badge { opacity: 0; transform: translateY(-8px) scale(.7); }
 .card__foil {
   position: absolute; inset: 0; display: grid; place-items: center;
   background: linear-gradient(115deg, #8d8ea6 0%, #d9dae6 22%, #9fa0b6 40%, #f0f0f6 55%, #9a9bb2 72%, #cfd0de 100%);
@@ -261,6 +293,7 @@ main { transition: opacity .4s ease-out; }
 .lightbox::backdrop { background: rgba(6, 4, 20, .94); }
 @keyframes fade { from { opacity: 0; } }
 .lightbox img { max-width: 100%; max-height: 82vh; touch-action: pinch-zoom; animation: grow .35s cubic-bezier(.2, .9, .3, 1.1); }
+.lightbox video { display: block; width: 100%; max-height: 82vh; background: #000; animation: grow .35s cubic-bezier(.2, .9, .3, 1.1); }
 @keyframes grow { from { transform: scale(.9); } }
 .lightbox__caption { font-family: var(--display); font-weight: 700; font-size: 18px; padding: 0 16px; text-align: center; }
 .lightbox__close {
