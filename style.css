@@ -307,17 +307,60 @@ main { transition: opacity .4s ease-out; }
 .skip input { flex: none; width: 18px; height: 18px; margin-top: 1px; accent-color: var(--pink); cursor: pointer; }
 .skip__saved { min-height: 1.4em; margin-top: 8px; color: var(--muted); font-size: 12px; }
 
-/* Bij "animatie overslaan" begint de pagina meteen bij de echo's. */
-.skip-intro .track { display: none; }
-.replay { display: none; }
-.skip-intro .replay {
+/* Knop "Overslaan" onder het krasvak, alleen voor wie het vinkje aanzette. */
+.skip-btn { display: none; }
+/* De intro ligt boven het eindbeeld, maar laat klikken door; alleen de knop zelf vangt ze op. */
+.anim .intro { z-index: 3; pointer-events: none; }
+.anim .skip-btn { pointer-events: auto; }
+.anim.returning .skip-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  margin-top: 16px; padding: 8px 14px;
-  border-radius: 999px; color: var(--ivory); text-decoration: none;
+  padding: 9px 16px;
+  border-radius: 999px; color: var(--ivory);
   font-size: 13px; font-weight: 700;
+  background: rgba(255, 255, 255, .06);
   box-shadow: inset 0 0 0 1px var(--line);
+  -webkit-tap-highlight-color: transparent;
 }
-.replay:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.skip-btn:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+/* Track-and-trace voor terugkerende bezoekers */
+.status { margin-top: 14px; text-align: left; }
+.status__title {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  font-family: var(--display); font-weight: 700; letter-spacing: -.03em; line-height: 1.06;
+}
+.status__now { font-size: clamp(28px, 8.4vw, 46px); }
+.status__next { font-size: clamp(20px, 5.6vw, 30px); color: var(--ivory); opacity: .32; }
+.status__bar {
+  position: relative; height: 10px; margin-top: 14px;
+  border-radius: 999px; background: rgba(255, 255, 255, .12);
+}
+.status__bar::after {
+  content: ""; position: absolute; right: -2px; top: 50%;
+  width: 14px; height: 14px; margin-top: -7px;
+  border-radius: 50%; background: var(--ink); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3);
+}
+.status__fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6ec1ff, #e9f6ff 55%, #ff7fbf);
+  box-shadow: 0 0 16px rgba(255, 127, 191, .45);
+  transition: width 1.6s cubic-bezier(.2, .8, .2, 1) .2s;
+}
+.status__fill::after {
+  content: ""; position: absolute; right: -7px; top: 50%;
+  width: 18px; height: 18px; margin-top: -9px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 127, 191, .35), 0 0 18px rgba(255, 127, 191, .8);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse { 50% { box-shadow: 0 0 0 8px rgba(255, 127, 191, 0), 0 0 18px rgba(255, 127, 191, .8); } }
+.status.is-shown .status__fill { width: var(--pct); }
+.status__meta {
+  display: flex; justify-content: space-between; gap: 12px;
+  margin-top: 12px; color: var(--muted); font-size: 13px; font-weight: 600;
+}
+.status__meta span:last-child { opacity: .7; text-align: right; }
 
 /* ---------- Lightbox ---------- */
 .lightbox {
@@ -339,5 +382,5 @@ main { transition: opacity .4s ease-out; }
 .lightbox__close:focus-visible { outline: 2px solid var(--ice); }
 
 @media (prefers-reduced-motion: reduce) {
-  .aurora, .card__foil, .card--scratch:not(.card--done):not(.is-scratching) { animation: none; }
+  .aurora, .card__foil, .card--scratch:not(.card--done):not(.is-scratching), .status__fill::after { animation: none; }
 }

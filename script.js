@@ -9,7 +9,19 @@ const ECHOS = [
   { date: '± april 2027', meta: 'Rond 36 weken' },
 ];
 
+const DUE_DATE = new Date(2027, 4, 20);
 const $ = (id) => document.getElementById(id);
+
+/* Bewaard op dit toestel; werkt de opslag niet (privévenster), dan valt alles stil terug op de gewone weergave. */
+const SKIP_KEY = 'babyforlife-skip-intro', SCRATCH_KEY = 'babyforlife-scratched';
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
+  set(key, value) {
+    try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  },
+};
+const returning = store.get(SKIP_KEY) === '1';
+const scratched = (() => { try { return JSON.parse(store.get(SCRATCH_KEY)) || []; } catch (e) { return []; } })();
 
 /* ---------- Lightbox ---------- */
 const lightbox = $('lightbox');
@@ -61,7 +73,9 @@ $('echo').addEventListener('click', () => openLightbox('echo-01.jpg', '12 oktobe
 
 /* ---------- Echo-overzicht ---------- */
 const rail = $('rail');
-ECHOS.forEach((echo, i) => {
+ECHOS.forEach((original, i) => {
+  /* Wie het vinkje aanzette, krijgt een al gekraste echo meteen open te zien. */
+  const echo = original.scratch && returning && scratched.includes(original.image) ? { ...original, scratch: false } : original;
   const card = document.createElement('article');
   card.className = 'card' + (echo.image && !echo.scratch ? ' card--done' : '') + (echo.scratch ? ' card--scratch' : '');
   const skip = echo.scratch ? ' tabindex="-1"' : '';
@@ -99,6 +113,7 @@ ECHOS.forEach((echo, i) => {
       card.classList.add('card--done');
       card.querySelector('.card__tag').textContent = tag(true);
       card.querySelectorAll('[tabindex="-1"]').forEach((el) => el.removeAttribute('tabindex'));
+      if (!scratched.includes(echo.image)) store.set(SCRATCH_KEY, JSON.stringify(scratched.concat(echo.image)));
       const r = card.querySelector('.card__media').getBoundingClientRect();
       confetti.at(r.left + r.width / 2, r.top + r.height / 2);
     });
@@ -185,28 +200,50 @@ const confetti = (() => {
   };
 })();
 
-/* ---------- Animatie overslaan bij een volgend bezoek ---------- */
-/* Bewaard op dit toestel. ?onthulling in de link toont de animatie toch nog een keer. */
-const SKIP_KEY = 'babyforlife-skip-intro';
-const storage = {
-  get() { try { return localStorage.getItem(SKIP_KEY) === '1'; } catch (e) { return false; } },
-  set(on) { try { if (on) localStorage.setItem(SKIP_KEY, '1'); else localStorage.removeItem(SKIP_KEY); return true; } catch (e) { return false; } },
-};
-const skipIntro = storage.get() && !new URLSearchParams(location.search).has('onthulling');
-if (skipIntro) document.documentElement.classList.add('skip-intro');
+/* ---------- Terugkerende bezoekers (vinkje onderaan) ---------- */
 const skipBox = $('skipIntro');
 if (skipBox) {
-  skipBox.checked = storage.get();
+  skipBox.checked = returning;
   skipBox.addEventListener('change', () => {
-    const saved = storage.set(skipBox.checked);
+    const saved = store.set(SKIP_KEY, skipBox.checked ? '1' : null);
     $('skipSaved').textContent = !saved ? 'Dit lukt niet in deze browser (privévenster?).'
-      : skipBox.checked ? 'Opgeslagen: volgende keer kom je meteen bij de echo\'s.' : 'Uitgezet: volgende keer zie je de animatie weer.';
+      : skipBox.checked ? 'Opgeslagen: volgende keer kun je de animatie overslaan.' : 'Uitgezet: volgende keer zie je alles weer zoals de eerste keer.';
   });
+}
+if (returning) {
+  document.documentElement.classList.add('returning');
+  showDeliveryStatus();
+}
+
+/* Track-and-trace in plaats van de titel: hoe ver de "productie" is, berekend vanaf de uitgerekende datum. */
+function showDeliveryStatus() {
+  const day = 864e5;
+  const left = Math.ceil((DUE_DATE - new Date().setHours(0, 0, 0, 0)) / day);
+  const days = Math.max(0, Math.min(280, 280 - left));
+  const pct = Math.round(days / 280 * 100);
+  const weeks = Math.floor(days / 7), rest = days % 7;
+  const age = `${weeks} weken${rest ? ` en ${rest} ${rest === 1 ? 'dag' : 'dagen'}` : ''}`;
+  const status = document.createElement('div');
+  status.className = 'status';
+  status.innerHTML = `
+    <h2 class="status__title"><span class="status__now">In productie</span><span class="status__next">Levering</span></h2>
+    <div class="status__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="Stand van de zwangerschap">
+      <span class="status__fill" style="--pct: ${pct}%"></span>
+    </div>
+    <div class="status__meta"><span>${age} · ${pct}%</span><span>Verwacht 20 mei 2027</span></div>`;
+  $('updatesTitle').replaceWith(status);
+  /* De balk loopt vol zodra hij in beeld komt. */
+  const io = new IntersectionObserver((entries) => {
+    if (!entries[0].isIntersecting) return;
+    status.classList.add('is-shown');
+    io.disconnect();
+  }, { threshold: 0.6 });
+  io.observe(status);
 }
 
 /* ---------- Scroll-scène ---------- */
 const canAnimate = window.gsap && window.ScrollTrigger && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (canAnimate && !skipIntro) initScene();
+if (canAnimate) initScene();
 
 /* Laadscherm weg zodra de letters, echo en lettertypes klaar zijn, of na maximaal 2,5 seconden. */
 const ready = [...document.querySelectorAll('#baby img, #mig img, #echo img')].map((img) => img.decode().catch(() => {}));
@@ -246,7 +283,7 @@ function initScene() {
   tl.to(foil, { progress: 1, duration: 3, onUpdate: foil.draw }, 0);
   tl.addLabel('words', 3);
   tl.to('#foil', { autoAlpha: 0, duration: 0.25 }, 2.85);
-  tl.to(['#prompt', '.intro .eyebrow'], { autoAlpha: 0, y: -24, duration: 0.4, ease: 'power2.in' }, 3);
+  tl.to(['#prompt', '.intro .eyebrow', '#skipBtn'], { autoAlpha: 0, y: -24, duration: 0.4, ease: 'power2.in' }, 3);
   tl.to('#ticket', { backgroundColor: 'rgba(0,0,0,0)', boxShadow: '0 0 0 0 rgba(240,203,116,0)', background: 'none', duration: 0.4 }, 3);
   tl.to('#word1', { scale: 1.35, duration: 0.5, ease: 'power2.out' }, 3);
 
@@ -302,7 +339,7 @@ function initScene() {
     $('track').appendChild(stop);
   });
   const babyStop = stops.length - 2;
-  let held = false, target = 0;
+  let held = false, target = 0, skipping = false;
   const timeAt = (s) => {
     const i = Math.min(Math.floor(s), stops.length - 2);
     return stops[i] + (stops[i + 1] - stops[i]) * (s - i);
@@ -312,6 +349,7 @@ function initScene() {
     start: 'top top',
     end: 'bottom bottom',
     onUpdate(self) {
+      if (skipping) return;
       const s = self.progress * (stops.length - 1);
       /* Pas blokkeren als de veeg na Baby bijna is aangekomen: eerder zou de vinger de veeg zelf tegenhouden. */
       if (s <= babyStop + 0.01) held = false;
@@ -330,6 +368,18 @@ function initScene() {
   /* Pas aan zodra alle stops bestaan, anders springt de browser naar de enige stop die er al is. */
   scrollTo(0, 0);
   document.documentElement.classList.add('snapping');
+
+  /* "Overslaan": meteen naar de echo's, met de scène stil op het eindbeeld en zonder confetti of scrollrem. */
+  $('skipBtn').addEventListener('click', () => {
+    skipping = true;
+    held = true;
+    won = true;
+    gsap.killTweensOf(tl);
+    target = stops[stops.length - 1];
+    tl.time(target);
+    scrollTo(0, $('after').offsetTop);
+    setTimeout(() => { skipping = false; }, 300);
+  });
 
   /* Gebeurt op tijd, niet op scroll: dit moet altijd helemaal afspelen. */
   let winTl;
