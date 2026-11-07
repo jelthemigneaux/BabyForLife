@@ -13,21 +13,44 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------- Lightbox ---------- */
 const lightbox = $('lightbox');
-const lightboxVideo = $('lightboxVideo');
+/* Het videovak wordt hier aangemaakt als het in index.html ontbreekt, zodat een oudere index.html niets breekt. */
+const lightboxVideo = $('lightboxVideo') || (() => {
+  const v = document.createElement('video');
+  v.id = 'lightboxVideo';
+  v.controls = true;
+  v.hidden = true;
+  $('lightboxCaption').before(v);
+  return v;
+})();
+lightboxVideo.playsInline = true;
+lightboxVideo.muted = true; // de echovideo heeft geen geluid; gedempt mag hij meteen starten
+const videoUrls = {};
+/* De video wordt eerst helemaal ingeladen: zo speelt hij ook op iPhones als de server geen stukjes ("range requests") levert. */
+function videoUrl(src) {
+  videoUrls[src] = videoUrls[src] || fetch(src)
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+    .then((blob) => URL.createObjectURL(blob))
+    .catch(() => src);
+  return videoUrls[src];
+}
 function openLightbox(src, caption, video) {
   $('lightboxImg').hidden = !!video;
   lightboxVideo.hidden = !video;
   if (video) {
     lightboxVideo.poster = src;
-    lightboxVideo.src = video;
+    videoUrl(video).then((url) => {
+      if (!lightbox.open) return;
+      lightboxVideo.src = url;
+      lightboxVideo.play().catch(() => {});
+    });
   } else {
     $('lightboxImg').src = src;
   }
   $('lightboxCaption').textContent = caption;
   lightbox.showModal();
-  if (video) lightboxVideo.play().catch(() => {});
 }
 lightbox.addEventListener('close', () => {
+  if (lightbox.open) return; // alweer geopend voor dit sluit-event binnenkwam
   lightboxVideo.pause();
   lightboxVideo.removeAttribute('src');
   lightboxVideo.load();
@@ -40,7 +63,7 @@ $('echo').addEventListener('click', () => openLightbox('echo-01.jpg', '12 oktobe
 const rail = $('rail');
 ECHOS.forEach((echo, i) => {
   const card = document.createElement('article');
-  card.className = 'card' + (echo.image && !echo.scratch ? ' card--done' : '');
+  card.className = 'card' + (echo.image && !echo.scratch ? ' card--done' : '') + (echo.scratch ? ' card--scratch' : '');
   const play = '<span class="card__play" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>';
   const check = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const label = `${echo.video ? 'Video van echo' : 'Echo'} ${i + 1} openen`;
@@ -470,6 +493,7 @@ function makeScratch(canvas, onDone) {
   canvas.addEventListener('pointerdown', (e) => {
     if (done) return;
     started = true;
+    canvas.closest('.card').classList.add('is-scratching');
     canvas.setPointerCapture(e.pointerId);
     last = null;
     scratch(point(e));
