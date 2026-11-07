@@ -185,15 +185,39 @@ const confetti = (() => {
   };
 })();
 
+/* ---------- Animatie overslaan bij een volgend bezoek ---------- */
+/* Bewaard op dit toestel. ?onthulling in de link toont de animatie toch nog een keer. */
+const SKIP_KEY = 'babyforlife-skip-intro';
+const storage = {
+  get() { try { return localStorage.getItem(SKIP_KEY) === '1'; } catch (e) { return false; } },
+  set(on) { try { if (on) localStorage.setItem(SKIP_KEY, '1'); else localStorage.removeItem(SKIP_KEY); return true; } catch (e) { return false; } },
+};
+const skipIntro = storage.get() && !new URLSearchParams(location.search).has('onthulling');
+if (skipIntro) document.documentElement.classList.add('skip-intro');
+const skipBox = $('skipIntro');
+if (skipBox) {
+  skipBox.checked = storage.get();
+  skipBox.addEventListener('change', () => {
+    const saved = storage.set(skipBox.checked);
+    $('skipSaved').textContent = !saved ? 'Dit lukt niet in deze browser (privévenster?).'
+      : skipBox.checked ? 'Opgeslagen: volgende keer kom je meteen bij de echo\'s.' : 'Uitgezet: volgende keer zie je de animatie weer.';
+  });
+}
+
 /* ---------- Scroll-scène ---------- */
 const canAnimate = window.gsap && window.ScrollTrigger && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-if (canAnimate) initScene();
+if (canAnimate && !skipIntro) initScene();
 
 /* Laadscherm weg zodra de letters, echo en lettertypes klaar zijn, of na maximaal 2,5 seconden. */
 const ready = [...document.querySelectorAll('#baby img, #mig img, #echo img')].map((img) => img.decode().catch(() => {}));
 if (document.fonts) ready.push(document.fonts.ready);
+/* De browser kan een oude scrollpositie terugzetten; de pagina begint altijd bovenaan zodra ze zichtbaar wordt. */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 Promise.race([Promise.all(ready), new Promise((done) => setTimeout(done, 2500))])
-  .then(() => document.documentElement.classList.remove('is-loading'));
+  .then(() => {
+    scrollTo(0, 0);
+    document.documentElement.classList.remove('is-loading');
+  });
 
 function initScene() {
   document.documentElement.classList.add('anim');

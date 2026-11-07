@@ -81,6 +81,10 @@
         <p class="eyebrow">Stand van de levering</p>
         <h2>Uw prijs, echo per echo</h2>
         <p class="updates__sub">Hier verschijnt elke nieuwe echo zodra ze er is. Veeg om mee te kijken.</p>
+        <a class="replay" href="?onthulling">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          Bekijk de onthulling opnieuw
+        </a>
       </header>
       <div class="rail" id="rail" tabindex="0" aria-label="Overzicht van de echo's"></div>
       <p class="rail__count" id="railCount" aria-hidden="true"></p>
@@ -89,6 +93,11 @@
     <footer class="foot">
       <p class="foot__names">Met liefde gefabriceerd door Jelthe &amp; Kaat</p>
       <p class="foot__small">Klachten over misleidende reclame worden niet behandeld.</p>
+      <label class="skip">
+        <input type="checkbox" id="skipIntro">
+        <span>Sla bij mijn volgende bezoek de animatie over en breng me meteen naar de echo's</span>
+      </label>
+      <p class="skip__saved" id="skipSaved" aria-live="polite"></p>
     </footer>
     </div>
   </main>

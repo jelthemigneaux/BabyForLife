@@ -296,6 +296,28 @@ main { transition: opacity .4s ease-out; }
 .foot { padding: 40px 24px 56px; text-align: center; }
 .foot__names { font-family: var(--display); font-weight: 700; font-size: 20px; line-height: 1.25; letter-spacing: -.02em; }
 .foot__small { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.skip {
+  display: flex; align-items: flex-start; gap: 10px;
+  max-width: 340px; margin: 28px auto 0; padding: 12px 14px;
+  border-radius: 14px; text-align: left; cursor: pointer;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+  color: var(--ivory); font-size: 13px; line-height: 1.45;
+}
+.skip input { flex: none; width: 18px; height: 18px; margin-top: 1px; accent-color: var(--pink); cursor: pointer; }
+.skip__saved { min-height: 1.4em; margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+/* Bij "animatie overslaan" begint de pagina meteen bij de echo's. */
+.skip-intro .track { display: none; }
+.replay { display: none; }
+.skip-intro .replay {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 16px; padding: 8px 14px;
+  border-radius: 999px; color: var(--ivory); text-decoration: none;
+  font-size: 13px; font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.replay:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 
 /* ---------- Lightbox ---------- */
 .lightbox {
