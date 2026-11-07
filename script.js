@@ -3,8 +3,8 @@
 const ECHOS = [
   { date: '12 oktober 2026', meta: '8 weken en 4 dagen', image: 'echo-01.jpg' },
   { date: '6 november 2026', meta: '12 weken en 1 dag', image: 'echo-02.jpg', video: 'echo-02.mp4', scratch: true },
-  { date: '± eind december 2026', meta: 'Rond 20 weken' },
-  { date: '± februari 2027', meta: 'Rond 26 weken' },
+  { date: '± 4 december 2026', meta: 'Rond 16 weken' },
+  { date: '± 4 januari 2027', meta: 'Rond 20 weken' },
   { date: '± maart 2027', meta: 'Rond 30 weken' },
   { date: '± april 2027', meta: 'Rond 36 weken' },
 ];
