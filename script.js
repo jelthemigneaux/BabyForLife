@@ -64,12 +64,17 @@ const rail = $('rail');
 ECHOS.forEach((echo, i) => {
   const card = document.createElement('article');
   card.className = 'card' + (echo.image && !echo.scratch ? ' card--done' : '') + (echo.scratch ? ' card--scratch' : '');
-  const play = '<span class="card__play" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>';
+  const skip = echo.scratch ? ' tabindex="-1"' : '';
+  const actions = `<div class="card__actions">
+      <button class="card__action card__action--play" type="button" aria-label="Video van echo ${i + 1} afspelen"${skip}><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></button>
+      <button class="card__action card__action--photo" type="button" aria-label="Foto van echo ${i + 1} groot openen"${skip}><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg></button>
+    </div>`;
   const check = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const label = `${echo.video ? 'Video van echo' : 'Echo'} ${i + 1} openen`;
   const media = echo.image
     ? `<div class="card__media">
-        <button class="card__open" type="button" aria-label="${label}"${echo.scratch ? ' tabindex="-1"' : ''}><img src="${echo.image}" alt="Echo ${i + 1}, ${echo.date}" loading="lazy">${echo.video ? play : ''}</button>
+        <button class="card__open" type="button" aria-label="${label}"${skip}><img src="${echo.image}" alt="Echo ${i + 1}, ${echo.date}" loading="lazy"></button>
+        ${echo.video ? actions : ''}
         ${echo.status ? `<span class="card__badge"><span class="card__check">${check}</span>${echo.status}</span>` : ''}
         ${echo.scratch ? `<canvas class="card__scratch" tabindex="0" role="button" aria-label="Kras echo ${i + 1} open"></canvas>` : ''}
       </div>`
@@ -84,12 +89,16 @@ ECHOS.forEach((echo, i) => {
   if (echo.image) {
     const caption = echo.status ? `${echo.date} · ${echo.status.toLowerCase()}` : echo.date;
     card.querySelector('.card__open').addEventListener('click', () => openLightbox(echo.image, caption, echo.video));
+    if (echo.video) {
+      card.querySelector('.card__action--play').addEventListener('click', () => openLightbox(echo.image, caption, echo.video));
+      card.querySelector('.card__action--photo').addEventListener('click', () => openLightbox(echo.image, caption));
+    }
   }
   if (echo.scratch) {
     makeScratch(card.querySelector('.card__scratch'), () => {
       card.classList.add('card--done');
       card.querySelector('.card__tag').textContent = tag(true);
-      card.querySelector('.card__open').removeAttribute('tabindex');
+      card.querySelectorAll('[tabindex="-1"]').forEach((el) => el.removeAttribute('tabindex'));
       const r = card.querySelector('.card__media').getBoundingClientRect();
       confetti.at(r.left + r.width / 2, r.top + r.height / 2);
     });
